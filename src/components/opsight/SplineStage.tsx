@@ -15,25 +15,50 @@ declare module "react" {
   }
 }
 
+let cachedSplineViewer: HTMLElement | null = null;
+let splineViewerReady = false;
+
 export function SplineStage() {
   const hostRef = useRef<HTMLDivElement>(null);
-  const [ready, setReady] = useState(false);
+  const [ready, setReady] = useState(splineViewerReady);
 
   useEffect(() => {
     let cancelled = false;
 
     const mount = () => {
-      if (cancelled || !hostRef.current || hostRef.current.childElementCount) return;
+      if (cancelled || !hostRef.current) return;
+      
+      // If we already have a cached viewer, re-attach it instantly
+      if (cachedSplineViewer) {
+        if (!hostRef.current.contains(cachedSplineViewer)) {
+          hostRef.current.appendChild(cachedSplineViewer);
+        }
+        setReady(true);
+        splineViewerReady = true;
+        return;
+      }
+
+      if (hostRef.current.childElementCount) return;
+
       const viewer = document.createElement("spline-viewer");
       viewer.setAttribute("url", SCENE_URL);
-      viewer.setAttribute("events-target", "global");
+      viewer.setAttribute("events-target", "canvas");
       viewer.style.width = "100%";
       viewer.style.height = "100%";
       viewer.style.background = "transparent";
-      viewer.addEventListener("load", () => setReady(true));
+      viewer.addEventListener("load", () => {
+        setReady(true);
+        splineViewerReady = true;
+      });
+
+      cachedSplineViewer = viewer;
       hostRef.current.appendChild(viewer);
+
       // Fallback in case the load event never fires.
-      window.setTimeout(() => setReady(true), 6000);
+      window.setTimeout(() => {
+        setReady(true);
+        splineViewerReady = true;
+      }, 4000);
     };
 
     if (customElements.get("spline-viewer")) {
@@ -56,6 +81,10 @@ export function SplineStage() {
 
     return () => {
       cancelled = true;
+      // Keep cachedSplineViewer intact for instant re-mount
+      if (cachedSplineViewer && cachedSplineViewer.parentElement) {
+        cachedSplineViewer.parentElement.removeChild(cachedSplineViewer);
+      }
     };
   }, []);
 
@@ -73,7 +102,7 @@ export function SplineStage() {
 
       <div
         ref={hostRef}
-        className="absolute inset-y-0 left-0 w-[105%] lg:w-[110%] -translate-x-[32%] sm:-translate-x-[34%] lg:-translate-x-[36%] scale-[0.88] sm:scale-[0.92] lg:scale-[0.95] origin-center"
+        className="absolute inset-y-0 left-0 w-[105%] lg:w-[110%] -translate-x-[30%] sm:-translate-x-[32%] lg:-translate-x-[34%] scale-[0.88] sm:scale-[0.92] lg:scale-[0.95] origin-center"
       />
 
       {/* edge dissolve so the 3D world has no visible boundary */}

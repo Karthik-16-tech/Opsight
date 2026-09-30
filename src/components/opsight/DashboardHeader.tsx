@@ -5,10 +5,10 @@ interface DashboardHeaderProps {
 }
 
 const navLinks = [
+  { id: "app-dashboard", label: "App Dashboard", href: "/app-dashboard" },
   { id: "spline", label: "Spline", href: "/dashboard" },
   { id: "environment", label: "3D Environment", href: "/environment" },
   { id: "connection", label: "Connection", href: "/connection" },
-  { id: "app-dashboard", label: "App Dashboard", href: "/app-dashboard" },
 ] as const;
 
 export function DashboardHeader({ active }: DashboardHeaderProps) {
@@ -41,7 +41,8 @@ export function DashboardHeader({ active }: DashboardHeaderProps) {
               <Link
                 key={item.id}
                 to={item.href}
-                className={`rounded-full px-3 py-1 text-[10px] sm:text-[11px] uppercase tracking-[0.16em] transition-all whitespace-nowrap ${
+                preload="intent"
+                className={`rounded-full px-3 py-1 text-[10px] sm:text-[11px] uppercase tracking-[0.16em] transition-all whitespace-nowrap cursor-pointer ${
                   isActive
                     ? "bg-white/15 text-white shadow-sm font-medium"
                     : "text-neutral-400 hover:text-white"

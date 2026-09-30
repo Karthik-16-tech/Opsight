@@ -47,16 +47,16 @@ function Index() {
   const lenisRef = useRef<Lenis | null>(null);
   const visibleNav = previewNav ?? activeNav;
 
-  // Initialize GSAP + Lenis inline kinetic smooth scroll
+  // Initialize GSAP + Lenis inline kinetic smooth scroll (Fast & Snappy)
   useEffect(() => {
     const lenis = new Lenis({
-      duration: 1.25,
+      duration: 0.55,
       easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       orientation: "vertical",
       gestureOrientation: "vertical",
       smoothWheel: true,
-      wheelMultiplier: 1.05,
-      touchMultiplier: 1.6,
+      wheelMultiplier: 1.45,
+      touchMultiplier: 2.2,
     });
 
     lenisRef.current = lenis;
@@ -114,7 +114,7 @@ function Index() {
     const targetId = item === "Home" ? "#main" : `#${item.toLowerCase()}`;
     if (lenisRef.current) {
       lenisRef.current.scrollTo(targetId, {
-        duration: 1.35,
+        duration: 0.4,
         easing: (t) => Math.min(1, 1.001 - Math.pow(2, -10 * t)),
       });
     } else {

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   Activity,
   ArrowRight,
@@ -171,40 +171,87 @@ function Dashboard() {
 
       {selectedService && (
         <div className="detail-backdrop" role="presentation" onClick={() => setSelectedService(null)}>
-          <section className="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-title" onClick={(event) => event.stopPropagation()}>
-            <header>
-              <span className="detail-icon">{selectedService === "web" ? <ShoppingCart /> : selectedService === "api" ? <Code2 /> : <Server />}</span>
-              <Button variant="ghost" size="icon" aria-label="Close service details" onClick={() => setSelectedService(null)}>
-                <X />
-              </Button>
-            </header>
-            <span className="detail-eyebrow">SERVICE DETAILS</span>
-            <h2 id="detail-title">{serviceDetails[selectedService].title}</h2>
-            <span className={`detail-status ${selectedService === "web" ? "detail-status--healthy" : ""}`}>
-              <i />{serviceDetails[selectedService].status}
-            </span>
-            <p>{serviceDetails[selectedService].description}</p>
-            {selectedService === "web" && (
-              <div className="mb-4 rounded-xl overflow-hidden border border-white/15 shadow-xl">
+          {selectedService === "web" ? (
+            /* ── NEXA compact service dialog with Open Preview button ── */
+            <section
+              className="detail-dialog"
+              role="dialog"
+              aria-modal="true"
+              aria-labelledby="detail-title"
+              onClick={(event) => event.stopPropagation()}
+            >
+              <header>
+                <span className="detail-icon"><ShoppingCart /></span>
+                <Button variant="ghost" size="icon" aria-label="Close service details" onClick={() => setSelectedService(null)}>
+                  <X />
+                </Button>
+              </header>
+              <span className="detail-eyebrow">SERVICE DETAILS</span>
+              <h2 id="detail-title">{serviceDetails["web"].title}</h2>
+              <span className="detail-status detail-status--healthy"><i />Operational</span>
+              <p>{serviceDetails["web"].description}</p>
+
+              {/* Storefront thumbnail */}
+              <div style={{ margin: "0 0 16px", borderRadius: 12, overflow: "hidden", border: "1px solid oklch(1 0 0 / 12%)" }}>
                 <img
                   src={storefrontImage}
-                  alt="NEXA Storefront UI"
-                  className="w-full h-44 object-cover object-top"
+                  alt="NEXA Storefront"
+                  style={{ width: "100%", height: 130, objectFit: "cover", objectPosition: "top", display: "block" }}
                 />
               </div>
-            )}
-            <div className="detail-rows">
-              {serviceDetails[selectedService].rows.map(([label, value]) => (
-                <div key={label}>
-                  <span>{label}</span>
-                  <strong>{value}</strong>
-                </div>
-              ))}
-            </div>
-            <Button variant="outline" className="detail-close" onClick={() => setSelectedService(null)}>
-              Close details
-            </Button>
-          </section>
+
+              {/* Open Preview button — goes to /nexa full page */}
+              <Link
+                to="/nexa"
+                target="_blank"
+                rel="noopener noreferrer"
+                style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, width: "100%", padding: "13px 0", borderRadius: 12, background: "oklch(0.98 0 0)", color: "oklch(0.13 0.004 260)", fontWeight: 600, fontSize: 14, textDecoration: "none", marginBottom: 14, transition: "opacity 0.2s" }}
+                onMouseOver={(e) => (e.currentTarget.style.opacity = "0.88")}
+                onMouseOut={(e) => (e.currentTarget.style.opacity = "1")}
+              >
+                Open Live Preview <ArrowRight size={16} />
+              </Link>
+
+              <div className="detail-rows">
+                {serviceDetails["web"].rows.map(([label, value]) => (
+                  <div key={label}>
+                    <span>{label}</span>
+                    <strong>{value}</strong>
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" className="detail-close" onClick={() => setSelectedService(null)}>
+                Close details
+              </Button>
+            </section>
+          ) : (
+            /* ── Standard service detail dialog ── */
+            <section className="detail-dialog" role="dialog" aria-modal="true" aria-labelledby="detail-title" onClick={(event) => event.stopPropagation()}>
+              <header>
+                <span className="detail-icon">{selectedService === "api" ? <Code2 /> : <Server />}</span>
+                <Button variant="ghost" size="icon" aria-label="Close service details" onClick={() => setSelectedService(null)}>
+                  <X />
+                </Button>
+              </header>
+              <span className="detail-eyebrow">SERVICE DETAILS</span>
+              <h2 id="detail-title">{serviceDetails[selectedService].title}</h2>
+              <span className={`detail-status ${serviceDetails[selectedService].status.toLowerCase().includes("healthy") ? "detail-status--healthy" : ""}`}>
+                <i />{serviceDetails[selectedService].status}
+              </span>
+              <p>{serviceDetails[selectedService].description}</p>
+              <div className="detail-rows">
+                {serviceDetails[selectedService].rows.map(([label, value]) => (
+                  <div key={label}>
+                    <span>{label}</span>
+                    <strong>{value}</strong>
+                  </div>
+                ))}
+              </div>
+              <Button variant="outline" className="detail-close" onClick={() => setSelectedService(null)}>
+                Close details
+              </Button>
+            </section>
+          )}
         </div>
       )}
     </main>

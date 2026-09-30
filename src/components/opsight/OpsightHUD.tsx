@@ -207,6 +207,7 @@ function InspectionPanel({
   onApplyFix,
   isApplying,
   remediated,
+  onClose,
 }: {
   selected: ServiceId;
   tick: number;
@@ -217,6 +218,7 @@ function InspectionPanel({
   onApplyFix: (ticket: PreviousTicket) => void;
   isApplying: boolean;
   remediated: boolean;
+  onClose?: () => void;
 }) {
   const item = services[selected];
   const isHealthy = item.status === "HEALTHY" || remediated;
@@ -237,8 +239,19 @@ function InspectionPanel({
           </div>
           <h2>{item.name}</h2>
         </div>
-        <div className={`status-badge ${remediated ? "is-remediated" : !isHealthy ? "is-incident" : ""}`}>
-          {remediated ? "RESOLVED" : item.severity ?? item.status}
+        <div className="flex items-center gap-1.5">
+          <div className={`status-badge ${remediated ? "is-remediated" : !isHealthy ? "is-incident" : ""}`}>
+            {remediated ? "RESOLVED" : item.severity ?? item.status}
+          </div>
+          {onClose && (
+            <button
+              onClick={onClose}
+              className="p-1 text-white/50 hover:text-white rounded transition-colors cursor-pointer"
+              title="Close inspection"
+            >
+              <X size={14} />
+            </button>
+          )}
         </div>
       </div>
 
@@ -373,46 +386,55 @@ function InspectionPanel({
             <Brain size={12} /> HISTORICAL MATCHES FOR {item.name.toUpperCase()}
           </div>
 
-          {matchingTickets.map((ticket) => (
-            <div
-              key={ticket.id}
-              className="previous-ticket-card"
-              onClick={() => onSelectTicket(ticket)}
-            >
-              <div className="ticket-card-header">
-                <span className="ticket-id">{ticket.id}</span>
-                <span className="ticket-match">{ticket.similarity}% Match</span>
-                <span className="ticket-date">{ticket.date}</span>
+          {matchingTickets.length > 0 ? (
+            matchingTickets.map((ticket) => (
+              <div
+                key={ticket.id}
+                className="previous-ticket-card"
+                onClick={() => onSelectTicket(ticket)}
+              >
+                <div className="ticket-card-header">
+                  <span className="ticket-id">{ticket.id}</span>
+                  <span className="ticket-match">{ticket.similarity}% Match</span>
+                  <span className="ticket-date">{ticket.date}</span>
+                </div>
+                <div className="ticket-card-title">{ticket.title}</div>
+                <div className="ticket-fix-preview">
+                  <b>Proven Fix:</b> {ticket.fixSummary}
+                </div>
+                <div className="ticket-card-actions">
+                  <button
+                    type="button"
+                    className="ticket-inspect-btn"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onSelectTicket(ticket);
+                    }}
+                  >
+                    Inspect Ticket & Patch <ChevronRight size={12} />
+                  </button>
+                  <button
+                    type="button"
+                    className="ticket-apply-btn"
+                    disabled={isApplying || remediated}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      onApplyFix(ticket);
+                    }}
+                  >
+                    {remediated ? "Applied ✓" : isApplying ? "Applying..." : "Apply Fix"}
+                  </button>
+                </div>
               </div>
-              <div className="ticket-card-title">{ticket.title}</div>
-              <div className="ticket-fix-preview">
-                <b>Proven Fix:</b> {ticket.fixSummary}
-              </div>
-              <div className="ticket-card-actions">
-                <button
-                  type="button"
-                  className="ticket-inspect-btn"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onSelectTicket(ticket);
-                  }}
-                >
-                  Inspect Ticket & Patch <ChevronRight size={12} />
-                </button>
-                <button
-                  type="button"
-                  className="ticket-apply-btn"
-                  disabled={isApplying || remediated}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onApplyFix(ticket);
-                  }}
-                >
-                  {remediated ? "Applied ✓" : isApplying ? "Applying..." : "Apply Fix"}
-                </button>
-              </div>
+            ))
+          ) : (
+            <div className="p-3.5 rounded-lg bg-black/50 border border-white/10 text-xs text-neutral-300 font-mono space-y-2">
+              <p className="text-white/80 font-medium">No past incident history for this component.</p>
+              <p className="text-[11px] text-neutral-400 leading-relaxed">
+                All telemetry signals for {item.name} are within expected parameters. Check related services or view global tickets.
+              </p>
             </div>
-          ))}
+          )}
         </div>
       )}
     </aside>
@@ -634,11 +656,12 @@ export function OpsightHUD({
           tick={tick}
           activeTab={activeTab}
           onTabChange={setActiveTab}
-          onPreview={() => setPreviewOpen(true)}
+          onPreview={openPreviewModal}
           onSelectTicket={onSelectTicket}
           onApplyFix={handleApplyFix}
           isApplying={isApplying}
           remediated={remediated}
+          onClose={() => onSelect(null as any)}
         />
       ) : (
         <aside className="incident-summary glass-panel">
@@ -656,64 +679,140 @@ export function OpsightHUD({
             <b>{remediated ? "Fix verified" : "Started 12m ago"}</b>
           </div>
 
-          {/* Past Incidents Match Card */}
-          <div className="hindsight-match-banner">
-            <div className="flex items-center gap-1.5 text-purple-300 font-mono text-[10px]">
-              <Brain size={12} />
-              <span>2 SIMILAR HISTORICAL TICKETS FOUND</span>
-            </div>
-            <p className="text-[11px] text-neutral-300 mt-1">
-              Top match: <b>INC-014 (94% similarity)</b> — Database connection pool starvation.
-            </p>
-            <div className="flex items-center justify-between mt-2 pt-2 border-t border-purple-500/20">
-              <button
-                className="text-[10px] text-purple-300 hover:text-white font-mono flex items-center gap-1"
-                onClick={() => setAllTicketsOpen(true)}
-              >
-                View 5 past tickets <ChevronRight size={11} />
-              </button>
-              <button
-                className="text-[10px] text-emerald-400 hover:text-emerald-300 font-mono font-medium underline"
-                onClick={() => onSelectTicket(previousTickets[0])}
-              >
-                Inspect INC-014 Fix →
-              </button>
-            </div>
+          {/* Subtabs for instant switching between Live Signals and Past Fixes */}
+          <div className="panel-subtabs">
+            <button
+              className={activeTab === "telemetry" ? "is-active" : ""}
+              onClick={() => setActiveTab("telemetry")}
+            >
+              <Activity size={12} /> Live Signals
+            </button>
+            <button
+              className={activeTab === "hindsight" ? "is-active" : ""}
+              onClick={() => setActiveTab("hindsight")}
+            >
+              <Brain size={12} /> Previous Fixes ({previousTickets.length})
+            </button>
           </div>
 
-          <div className="signal-list">
-            <div>
-              <Activity size={15} />
-              <span>5xx errors</span>
-              <b>{remediated ? "0.01% ↓" : "8.4% ↑"}</b>
-            </div>
-            <div>
-              <Database size={15} />
-              <span>DB connections</span>
-              <b>{remediated ? "28%" : "98%"}</b>
-            </div>
-            <div>
-              <Globe2 size={15} />
-              <span>Deployment</span>
-              <b>Detected</b>
-            </div>
-          </div>
+          {activeTab === "telemetry" ? (
+            <>
+              {/* Past Incidents Match Card */}
+              <div className="hindsight-match-banner">
+                <div className="flex items-center gap-1.5 text-purple-300 font-mono text-[10px]">
+                  <Brain size={12} />
+                  <span>2 SIMILAR HISTORICAL TICKETS FOUND</span>
+                </div>
+                <p className="text-[11px] text-neutral-300 mt-1">
+                  Top match: <b>INC-014 (94% similarity)</b> — Database connection pool starvation.
+                </p>
+                <div className="flex items-center justify-between mt-2 pt-2 border-t border-purple-500/20">
+                  <button
+                    className="text-[10px] text-purple-300 hover:text-white font-mono flex items-center gap-1"
+                    onClick={() => setActiveTab("hindsight")}
+                  >
+                    View tickets inline <ChevronRight size={11} />
+                  </button>
+                  <button
+                    className="text-[10px] text-emerald-400 hover:text-emerald-300 font-mono font-medium underline"
+                    onClick={() => onSelectTicket(previousTickets[0] ?? null)}
+                  >
+                    Inspect INC-014 Fix →
+                  </button>
+                </div>
+              </div>
 
-          <div className="flex flex-col gap-2">
-            <Button
-              variant={remediated ? "default" : "danger"}
-              onClick={() => onSelect("payment")}
-            >
-              {remediated ? "Inspect healthy node" : "Inspect incident node"} <ChevronRight size={14} />
-            </Button>
-            <Button
-              variant="outline"
-              className="border-purple-500/30 text-purple-300 hover:bg-purple-950/40 text-xs font-mono"
-              onClick={openTicketsModal}
-            >
-              <History size={13} className="mr-1.5" /> Browse All Past Tickets & Fixes
-            </Button>
-          </div>
+              <div className="signal-list">
+                <div>
+                  <Activity size={15} />
+                  <span>5xx errors</span>
+                  <b>{remediated ? "0.01% ↓" : "8.4% ↑"}</b>
+                </div>
+                <div>
+                  <Database size={15} />
+                  <span>DB connections</span>
+                  <b>{remediated ? "28%" : "98%"}</b>
+                </div>
+                <div>
+                  <Globe2 size={15} />
+                  <span>Deployment</span>
+                  <b>Detected</b>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Button
+                  variant={remediated ? "default" : "danger"}
+                  onClick={() => onSelect("payment")}
+                >
+                  {remediated ? "Inspect healthy node" : "Inspect incident node"} <ChevronRight size={14} />
+                </Button>
+                <Button
+                  variant="outline"
+                  className="border-purple-500/30 text-purple-300 hover:bg-purple-950/40 text-xs font-mono"
+                  onClick={openTicketsModal}
+                >
+                  <History size={13} className="mr-1.5" /> Browse All Past Tickets & Fixes
+                </Button>
+              </div>
+            </>
+          ) : (
+            /* Historical Fixes / Tickets Tab */
+            <div className="space-y-2.5 mt-2">
+              <div className="text-[10px] font-mono text-purple-300 flex items-center justify-between">
+                <span className="flex items-center gap-1.5">
+                  <Brain size={12} /> HINDSIGHT CORRELATIONS
+                </span>
+                <button
+                  onClick={openTicketsModal}
+                  className="text-[10px] text-white/50 hover:text-white underline cursor-pointer"
+                >
+                  Drawer ({previousTickets.length})
+                </button>
+              </div>
+
+              {previousTickets.slice(0, 3).map((ticket) => (
+                <div
+                  key={ticket.id}
+                  className="previous-ticket-card"
+                  onClick={() => onSelectTicket(ticket)}
+                >
+                  <div className="ticket-card-header">
+                    <span className="ticket-id">{ticket.id}</span>
+                    <span className="ticket-match">{ticket.similarity}% Match</span>
+                    <span className="ticket-date">{ticket.date}</span>
+                  </div>
+                  <div className="ticket-card-title">{ticket.title}</div>
+                  <div className="ticket-fix-preview">
+                    <b>Proven Fix:</b> {ticket.fixSummary}
+                  </div>
+                  <div className="ticket-card-actions">
+                    <button
+                      type="button"
+                      className="ticket-inspect-btn"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        onSelectTicket(ticket);
+                      }}
+                    >
+                      Inspect Fix <ChevronRight size={12} />
+                    </button>
+                    <button
+                      type="button"
+                      className="ticket-apply-btn"
+                      disabled={isApplying || remediated}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        handleApplyFix(ticket);
+                      }}
+                    >
+                      {remediated ? "Applied ✓" : isApplying ? "Applying..." : "Apply Fix"}
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </aside>
       )}
 
